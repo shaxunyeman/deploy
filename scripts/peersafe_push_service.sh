@@ -27,7 +27,7 @@ redis=`cat "${peersafe_push_service_config}" | jq -r .redis`
 log_level=`cat "${peersafe_push_service_config}" | jq -r .log_level`
 
 function has_service() {
-    local count=`ps -ef|grep "$1"|grep -v grep|grep -v sh|grep -v bash|grep -v make|wc -l`
+    local count=`ps -ef|grep "$1"|grep -v grep|grep -v sh|grep -v ssh|grep -v bash|grep -v make|wc -l`
     echo ${count}
 }
 

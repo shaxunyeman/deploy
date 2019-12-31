@@ -27,7 +27,7 @@ rest_api_port=`cat "${peersafe_box_config}" | jq -r .rest_api_port`
 rest_api_protocol=`cat "${peersafe_box_config}" | jq -r .rest_api_protocol`
 
 function has_peersafe_box() {
-    local count=`ps -ef|grep peersafe_box|grep -v grep|grep -v sh|grep -v bash|grep -v make|wc -l`
+    local count=`ps -ef|grep peersafe_box|grep -v grep|grep -v ssh|grep -v sh|grep -v bash|grep -v make|wc -l`
     echo ${count}
 }
 

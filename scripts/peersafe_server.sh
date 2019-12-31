@@ -24,7 +24,7 @@ ip_family=`cat "${peersafe_server_config}" | jq -r .ip_family`
 log_level=`cat "${peersafe_server_config}" | jq -r .log_level`
 
 function has_peersafe_server() {
-    local count=`ps -ef|grep peersafe_server|grep -v grep|grep -v sh|grep -v bash|grep -v make|wc -l`
+    local count=`ps -ef|grep peersafe_server|grep -v grep|grep -v sh|grep -v ssh|grep -v bash|grep -v make|wc -l`
     echo ${count}
 }
 

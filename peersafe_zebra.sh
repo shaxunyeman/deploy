@@ -40,12 +40,12 @@ function usage() {
 }
 
 function has_service() {
-    local service_count=`ps -ef|grep $1|grep -v grep|grep -v bash|wc -l`
+    local service_count=`ps -ef|grep $1|grep -v grep|grep -v bash|grep -v ssh|wc -l`
     echo ${service_count}
 }
 
 function service_pid() {
-    local service=`ps -ef|grep $1|grep -v grep|grep -v bash| awk '{print $2}'`
+    local service=`ps -ef|grep $1|grep -v grep|grep -v bash|grep -v ssh| awk '{print $2}'`
     echo ${service}
 }
 
@@ -53,13 +53,13 @@ function kill_service() {
     local service_name="$1"
 
     # kill parent process
-    local parent_service=`ps -ef|grep ${service_name}|grep -v grep|grep -v bash| awk '{print $3}'`
+    local parent_service=`ps -ef|grep ${service_name}|grep -v grep|grep -v bash|grep -v ssh| awk '{print $3}'`
     if [ ${parent_service} -gt 1 ]; then
         kill -9 ${parent_service}
     fi
 
     # then kill child process
-    local service=`ps -ef|grep ${service_name}|grep -v grep|grep -v bash| awk '{print $2}'`
+    local service=`ps -ef|grep ${service_name}|grep -v grep|grep -v bash|grep -v ssh| awk '{print $2}'`
     if [ ${service} -gt 0 ]; then
         kill -9 ${service}
     fi

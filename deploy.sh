@@ -273,15 +273,15 @@ function start_peersafe_relay() {
 
     local listen_port=$(service_port "${service_name}")
     local ip_protocol=$(service_ip_family "${service_name}")
-    local user=$(peersafe_relay_user)
-    local passwd=$(peersafe_relay_passwd)
+    local ice_user=$(peersafe_relay_user)
+    local ice_passwd=$(peersafe_relay_passwd)
 
 config=$(< <(cat <<EOF
 {
     "port":${listen_port},
     "ip_family":${ip_protocol},
-    "user":"${user}",
-    "passwd":"${passwd}"
+    "user":"${ice_user}",
+    "passwd":"${ice_passwd}"
 }
 EOF
 ))

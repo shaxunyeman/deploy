@@ -1,8 +1,9 @@
 {
-    "work_path":"/home/ubuntu/zebra",
+    "work_path":"~/zebra",
     "peersafe_server": {
         "hosts":[
-            {"user":"ubuntu","ip":"139.199.164.113", "port":22,"key":"~/.ssh/id_rsa"}
+            {"user":"ubuntu","ip":"139.199.164.113", "port":22,"key":"~/.ssh/id_rsa"},
+            {"user":"dbliu","ip":"192.168.3.54", "port":22,"key":"~/.ssh/id_rsa"}
         ],
         "port":37053,
         "ip_family":4,

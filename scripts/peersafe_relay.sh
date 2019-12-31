@@ -24,7 +24,7 @@ user=`cat "${peersafe_relay_config}" | jq -r .user`
 passwd=`cat "${peersafe_relay_config}" | jq -r .passwd`
 
 function has_peersafe_relay() {
-    local count=`ps -ef|grep peersafe_relay|grep -v grep|grep -v sh|grep -v bash|grep -v make|wc -l`
+    local count=`ps -ef|grep peersafe_relay|grep -v grep|grep -v sh|grep -v ssh|grep -v bash|grep -v make|wc -l`
     echo ${count}
 }
 
