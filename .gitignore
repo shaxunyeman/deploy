@@ -1,0 +1,9 @@
+boxinfo
+.passwd
+nohup.out
+deploy.log
+keys
+peersafe_zebra_service.tar.gz
+log/
+etc/
+bin/

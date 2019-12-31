@@ -1,0 +1,49 @@
+{
+    "work_path":"/home/ubuntu/zebra",
+    "peersafe_server": {
+        "hosts":[
+            {"user":"ubuntu","ip":"139.199.164.113", "port":22,"key":"~/.ssh/id_rsa"}
+        ],
+        "port":37053,
+        "ip_family":4,
+        "log_level":"Info",
+        "bootstraps":[
+            "139.199.164.113:37053"
+        ]
+    },
+    "peersafe_box": {
+        "hosts":[
+            {"user":"ubuntu","ip":"139.199.164.113", "port":22,"key":"~/.ssh/id_rsa"}
+        ],
+        "port":47054,
+        "ip_family":4,
+        "log_level":"Info",
+        "rest_api_port":8080,
+        "rest_api_protocol":"http",
+        "bootstraps":[
+            "139.199.164.113:37053"
+        ],
+        "peersafe_relays":[
+            "peersafe:peersafe@192.168.29.:34780"
+        ]
+    },
+    "peersafe_relay": {
+        "hosts":[
+            {"user":"ubuntu","ip":"139.199.164.113", "port":22,"key":"~/.ssh/id_rsa"}
+        ],
+        "port":34780,
+        "ip_family":4,
+        "user":"peersafe",
+        "passwd":"peersafe"
+    },
+    "peersafe_push_service":{
+        "hosts":[
+            {"user":"ubuntu","ip":"139.199.164.113", "port":22,"key":"~/.ssh/id_rsa"}
+        ],
+        "redis":"127.0.0.1:6379",
+        "log_level":"Info",
+        "bootstraps":[
+            "127.0.0.1:37053"
+        ]
+    }
+}
