@@ -2,10 +2,6 @@
 
 ## 目录结构
 
-**bin** 目录包含 zebra 服务
-
-**etc** 目录包含 zebra 服务配置
-
 **scripts** 目录包含服务执行脚本
 
 **peersafe_zebra_service.tar.gz** 压缩文件里直接包括 peersafe_server、peersafe_relay、peersafe_client 和 peersafe_push_service 服务
@@ -22,46 +18,47 @@
 
 ```json
 {
-    "work_path":"/home/peersafe/zebra",
+    "work_path":"~/zebra",
     "peersafe_server": {
         "hosts":[
-            {"user":"peersafe","ip":"192.168.29.145", "port":22,"key":"/home/dbliu/.ssh/id_rsa@jumperserver"}
+            {"user":"dev","ip":"127.0.0.1", "port":22,"key":"~/.ssh/id_rsa"}
         ],
+        "disable_zero":0,
         "port":37053,
         "ip_family":4,
         "log_level":"Info",
         "bootstraps":[
-            "192.168.29.145:37053"
+            "127.0.0.1:37053"
         ]
     },
     "peersafe_box": {
         "hosts":[
-            {"user":"peersafe","ip":"192.168.29.145", "port":22,"key":"/home/dbliu/.ssh/id_rsa@jumperserver"}
+            {"user":"dev","ip":"127.0.0.1", "port":22,"key":"~/.ssh/id_rsa"}
         ],
         "port":47054,
-        "ip_family":4,
+        "ip_family":6,
         "log_level":"Info",
         "rest_api_port":8080,
         "rest_api_protocol":"http",
         "bootstraps":[
-            "192.168.29.145:37053"
+            "127.0.0.1:37053"
         ],
         "peersafe_relays":[
-            "peersafe:peersafe@192.168.29.:34780"
+	    "peersafe:peersafe@::FFFF:127.0.0.1:34780"
         ]
     },
     "peersafe_relay": {
         "hosts":[
-            {"user":"peersafe","ip":"192.168.29.145", "port":22,"key":"~/.ssh/id_rsa@jumperserver"}
+            {"user":"dev","ip":"127.0.0.1", "port":22,"key":"~/.ssh/id_rsa"}
         ],
         "port":34780,
-        "ip_family":4,
+        "ip_family":6,
         "user":"peersafe",
         "passwd":"peersafe"
     },
     "peersafe_push_service":{
         "hosts":[
-            {"user":"peersafe","ip":"192.168.29.145", "port":22,"key":"~/.ssh/id_rsa@jumperserver"}
+            {"user":"dev","ip":"127.0.0.1", "port":22,"key":"~/.ssh/id_rsa"}
         ],
         "redis":"127.0.0.1:6379",
         "log_level":"Info",
@@ -77,6 +74,7 @@
 - .peersafe_server 部署 peersafe_server 服务参数配置
 
   - .peersafe_server.hosts 远程主机地址列表，目前仅支持登录秘钥
+  - .peersafe_server.disable_zero 是否启动 zero 节点，默认启动
   - .peersafe_server.port peersafe_server 服务监听端口
   - .peersafe_server.ip_family 值为 4 代表 IPv4，6 代表 IPv6
   - .peersafe_server.log_level 日志登录，值可以为 Verbose(V), Info(I), Success(S), Warning(W), Error(E), Always(A)
@@ -125,16 +123,17 @@ usage:
   stop        stop a service
   show        show status of a service
   remove      remove zebra directory
+  dep         install dependencies
 
  services
-  peersafe_server
+  peersafe_server 
   peersafe_relay
-  peersafe_box
+  peersafe_box              
   peersafe_push
-
- options
-  -i|--which  where executes instructions
-  --bootstrap hosts1[:hosts2]     specify a bootstrap nodes, only for peersafe_server
+  
+options
+  -i|--which  where execute instructions
+  --bootstrap hosts1[;hosts2]     specify a bootstrap nodes
 
 examples:
  peersafe_zebra start                         start all services
@@ -143,6 +142,12 @@ examples:
  peersafe_zebra stop                          stop all services
  peersafe_zebra show                          show all status of running services
 ```
+
+**安装依赖包**
+```json
+> ./deploy.sh dep
+```
+> 注: 执行其他命令前，请先安装依赖包
 
 **启动配置文件所有程序**
 

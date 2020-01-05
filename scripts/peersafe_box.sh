@@ -23,6 +23,7 @@ zero=`cat "${peersafe_box_config}" | jq -r .zero`
 listen_port=`cat "${peersafe_box_config}" | jq -r .port`
 ip_family=`cat "${peersafe_box_config}" | jq -r .ip_family`
 log_level=`cat "${peersafe_box_config}" | jq -r .log_level`
+rest_api_ip=`cat "${peersafe_box_config}" | jq -r .rest_api_ip`
 rest_api_port=`cat "${peersafe_box_config}" | jq -r .rest_api_port`
 rest_api_protocol=`cat "${peersafe_box_config}" | jq -r .rest_api_protocol`
 
@@ -124,7 +125,7 @@ do
         fi
 
         ${peersafe_box} ${cache_arg} -${ip_family} --uploadbox ${box_password} \
-        -p ${listen_port} -P ${bootstrap} --rest_api_port ${rest_api_port} \
+        -p ${listen_port} -P ${bootstrap} --rest_api_ip ${rest_api_ip} --rest_api_port ${rest_api_port} \
         --rest_api_protocol "${rest_api_protocol}" --log_no_console \
         --log_folder ${zebra_log_dir} --log_* ${log_level} 2>${error_log} 1>${console_log} &
     fi

@@ -14,6 +14,12 @@ GREEN='\033[0;32m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
+has_jq=`jq --version 2>/dev/null|wc -l`
+if [ ${has_jq} -eq 0 ]; then
+    printf "${GREEN}install jq${NC}\n"
+    sudo apt-get -y install jq
+fi
+
 services_tar_name="peersafe_zebra_service.tar.gz"
 deploy_log="deploy.log"
 
@@ -21,13 +27,13 @@ declare -a DEFUALT_SERVICES_ARRAY
 declare -a SERVICES_ARRAY
 
 COMMAND=""
+disable_zero=0
 zero_node=1
 bootstrap=""
 which_remote_node=-1
+deploy_config="config.json"
 
 DEFUALT_SERVICES_ARRAY=("${DEFUALT_SERVICES_ARRAY[@]}" "peersafe_server" "peersafe_box" "peersafe_relay")
-
-zebra_dir=`cat config.json | jq -r .work_path`
 
 function usage() {
     echo "usage: "
@@ -48,6 +54,7 @@ function usage() {
     echo "  peersafe_push"
     echo
     echo " options"
+    echo "  -c|--config specify config, defualt ${deploy_config}"
     echo "  -i|--which  where executes instructions"
     echo "  --bootstrap hosts1[;hosts2]     specify a bootstrap nodes, only for peersafe_server"
     echo
@@ -61,7 +68,7 @@ function usage() {
 }
 
 function nodes() {
-    local nodes=`cat config.json | jq -r .$1| jq -r .hosts`
+    local nodes=`cat ${deploy_config} | jq -r .$1| jq -r .hosts`
     echo "${nodes}"
 }
 
@@ -109,28 +116,33 @@ function passwd() {
 }
 
 function service_log_level() {
-    local port=`cat config.json | jq -r .$1| jq -r .log_level`
+    local port=`cat ${deploy_config} | jq -r .$1| jq -r .log_level`
     echo ${port}
 }
 
 function service_port() {
-    local port=`cat config.json | jq -r .$1| jq -r .port`
+    local port=`cat ${deploy_config} | jq -r .$1| jq -r .port`
     echo ${port}
 }
 
 function service_ip_family() {
-    local ip_family=`cat config.json | jq -r .$1| jq -r .ip_family?`
+    local ip_family=`cat ${deploy_config} | jq -r .$1| jq -r .ip_family?`
     echo ${ip_family}
 }
 
 function peersafe_relay_user() {
-    local user=`cat config.json | jq -r .peersafe_relay | jq -r .user`
+    local user=`cat ${deploy_config} | jq -r .peersafe_relay | jq -r .user`
     echo "${user}"
 }
 
 function peersafe_relay_passwd() {
-    local passwd=`cat config.json | jq -r .peersafe_relay | jq -r .passwd`
+    local passwd=`cat ${deploy_config} | jq -r .peersafe_relay | jq -r .passwd`
     echo "${passwd}"
+}
+
+function disable_zero() {
+    local disable=`cat ${deploy_config} | jq -r .peersafe_server | jq -r .disable_zero`
+    echo ${disable}
 }
 
 function setup_script() {
@@ -171,6 +183,12 @@ function start_peersafe_server() {
     local listen_port=$(service_port "${service_name}")
     local log_level=$(service_log_level "${service_name}")
 
+    local disable_zero=$(disable_zero)
+
+    if [ "${disable_zero}" == "1" ]; then
+        zero_node=0
+    fi
+
     local ip=$(ip "${node}")
     local port=$(port "${node}")
     local user=$(user "${node}")
@@ -184,7 +202,7 @@ config=$(< <(cat <<EOF
     "port":${listen_port},
     "ip_family":${ip_protocol},
     "log_level":"${log_level}",
-    "bootstraps":`cat config.json | jq -r .${service_name}| jq -r .bootstraps?`
+    "bootstraps":`cat ${deploy_config} | jq -r .${service_name}| jq -r .bootstraps?`
 }
 EOF
 ))
@@ -208,6 +226,10 @@ EOF
     # start peersafe_server on remote host
     ssh -i "${key}" ${user}@${ip} -p ${port} \
     "cd ${zebra_dir};./peersafe_zebra.sh start ${service_name}"
+
+    if [ "${zero_node}" = "1" ]; then
+        zero_node=0
+    fi
 }
 
 function start_peersafe_box() {
@@ -223,8 +245,9 @@ function start_peersafe_box() {
     local listen_port=$(service_port "${service_name}")
     local log_level=$(service_log_level "${service_name}")
 
-    local rest_api_port=`cat config.json | jq -r .peersafe_box | jq -r .rest_api_port`
-    local rest_api_protocol=`cat config.json | jq -r .peersafe_box | jq -r .rest_api_protocol`
+    local rest_api_ip=`cat ${deploy_config} | jq -r .peersafe_box | jq -r .rest_api_ip`
+    local rest_api_port=`cat ${deploy_config} | jq -r .peersafe_box | jq -r .rest_api_port`
+    local rest_api_protocol=`cat ${deploy_config} | jq -r .peersafe_box | jq -r .rest_api_protocol`
     local config=""
 
     if [ "${bootstrap}" = "" ]; then
@@ -233,10 +256,11 @@ config=$(< <(cat <<EOF
     "port":${listen_port},
     "ip_family":${ip_protocol},
     "log_level":"${log_level}",
+    "rest_api_ip":"${rest_api_ip}",
     "rest_api_port":${rest_api_port},
     "rest_api_protocol":"${rest_api_protocol}",
-    "bootstraps":`cat config.json | jq -r .${service_name}| jq -r .bootstraps?`,
-    "peersafe_relay":`cat config.json | jq -r .${service_name}| jq -r .peersafe_relays?`
+    "bootstraps":`cat ${deploy_config} | jq -r .${service_name}| jq -r .bootstraps?`,
+    "peersafe_relay":`cat ${deploy_config} | jq -r .${service_name}| jq -r .peersafe_relays?`
 }
 EOF
 ))
@@ -246,10 +270,11 @@ config=$(< <(cat <<EOF
     "port":${listen_port},
     "ip_family":${ip_protocol},
     "log_level":"${log_level}",
+    "rest_api_ip":"${rest_api_ip}",
     "rest_api_port":${rest_api_port},
     "rest_api_protocol":"${rest_api_protocol}",
     "bootstraps":`echo "{\"bootstraps\":[\"${bootstrap}\"]}" | jq -r .bootstraps`,
-    "peersafe_relay":`cat config.json | jq -r .${service_name}| jq -r .peersafe_relays?`
+    "peersafe_relay":`cat ${deploy_config} | jq -r .${service_name}| jq -r .peersafe_relays?`
 }
 EOF
 ))
@@ -290,8 +315,8 @@ EOF
     $(setup_script "${node}" "${service_name}" "${config}")
 
     # start a peersafe_relay
-    ssh -f -i "${key}" ${user}@${ip} -p ${port} \
-    "cd ${zebra_dir};./peersafe_zebra.sh start ${service_name} 1>/dev/null 2>&1 &"
+    ssh -i "${key}" ${user}@${ip} -p ${port} \
+    "cd ${zebra_dir};./peersafe_zebra.sh start ${service_name}"
 }
 
 function start_peersafe_push_service() {
@@ -304,7 +329,7 @@ function start_peersafe_push_service() {
     local key=$(key "${node}")
 
     local log_level=$(service_log_level "${service_name}")
-    local redis=`cat config.json | jq -r .${service_name}| jq -r .redis`
+    local redis=`cat ${deploy_config} | jq -r .${service_name}| jq -r .redis`
     local config=""
 
     if [ "${bootstrap}" = "" ]; then
@@ -312,7 +337,7 @@ config=$(< <(cat <<EOF
 {
     "redis":"127.0.0.1:6379",
     "log_level":"${log_level}",
-    "bootstraps":`cat config.json | jq -r .${service_name}| jq -r .bootstraps?`
+    "bootstraps":`cat ${deploy_config} | jq -r .${service_name}| jq -r .bootstraps?`
 }
 EOF
 ))
@@ -346,8 +371,8 @@ EOF
     fi
 
     # start a peersafe_push_service
-    ssh -ft -i "${key}" ${user}@${ip} -p ${port} \
-    "cd ${zebra_dir};./peersafe_zebra.sh start ${service_name} 1>/dev/null 2>&1 "
+    ssh -t -i "${key}" ${user}@${ip} -p ${port} \
+    "cd ${zebra_dir};./peersafe_zebra.sh start ${service_name}"
 }
 
 function start() {
@@ -416,9 +441,6 @@ function start() {
                 #echo "ssh ${user}@${ip} -p ${port} -i ${key}"
                 if [ "${service_name}" = "peersafe_server" ]; then
                     start_peersafe_server "${node}" "${service_name}"
-                    if [ "${zero_node}" = "1" ]; then
-                        zero_node=0
-                    fi
                 elif [ "${service_name}" = "peersafe_relay" ]; then
                     start_peersafe_relay "${node}" "${service_name}"
                 elif [ "${service_name}" = "peersafe_box" ]; then
@@ -670,6 +692,11 @@ case $key in
     SERVICES_ARRAY=("${SERVICES_ARRAY[@]}" "peersafe_push_service")
     shift # past argument
     ;;
+    -c|--config)
+    deploy_config="$2"
+    shift # past argument
+    shift # past value
+    ;;
     -i|--which)
     which_remote_node="$2"
     shift # past argument
@@ -694,6 +721,14 @@ done
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
 # executes
+
+if [ ! -f "${deploy_config}" ]; then
+    printf "${RED}${deploy_config} doesn't exists${NC}\n"
+    exit 1
+fi
+
+zebra_dir=`cat ${deploy_config} | jq -r .work_path`
+
 if [ "${COMMAND}" = "start" ]; then
     start 
 elif [ "${COMMAND}" = "show" ]; then
@@ -704,4 +739,6 @@ elif [ "${COMMAND}" = "remove" ]; then
     remove_zebra
 elif [ "${COMMAND}" = "dep" ]; then
     install_dependencies
+else
+    usage 
 fi

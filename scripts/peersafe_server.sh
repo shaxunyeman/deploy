@@ -23,11 +23,6 @@ listen_port=`cat "${peersafe_server_config}" | jq -r .port`
 ip_family=`cat "${peersafe_server_config}" | jq -r .ip_family`
 log_level=`cat "${peersafe_server_config}" | jq -r .log_level`
 
-function has_peersafe_server() {
-    local count=`ps -ef|grep peersafe_server|grep -v grep|grep -v sh|grep -v ssh|grep -v bash|grep -v make|wc -l`
-    echo ${count}
-}
-
 function has_service() {
     local has=`netstat -nulp 2>/dev/null|grep $1|wc -l`
     echo ${has}
@@ -75,12 +70,6 @@ if [ ! -f "${peersafe_server}" ]; then
     exit 1
 fi
 
-has_peersafe_server=$(has_peersafe_server)
-if [ ${has_peersafe_server} -gt 0 ]; then
-    printf "${RED}peersafe_server has already run\n${NC}"
-    exit 1
-fi
-
 has_service=$(has_service ${listen_port})
 if [ ${has_service} -gt 0 ]; then
     printf "${RED}port ${listen_port} has already opened\n${NC}"
@@ -89,7 +78,7 @@ fi
 
 while true
 do
-    has_peersafe_server=$(has_peersafe_server)
+    has_peersafe_server=$(has_service ${listen_port})
     if [ ${has_peersafe_server} -eq 0 ]; then
 
         date=`date +%Y-%m-%d`
