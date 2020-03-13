@@ -94,7 +94,7 @@ do
                 2>>${error_log} 1>>${console_log} &
         else
             ${peersafe_server} -f -${ip_family} -p ${listen_port} \
-                -P ${bootstrap} --log_no_console --log_folder \
+                -P "${bootstrap}" --log_no_console --log_folder \
                 ${zebra_log_dir} --log_* ${log_level} 2>>${error_log} 1>>${console_log} &
         fi
     fi
