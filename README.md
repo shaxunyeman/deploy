@@ -178,7 +178,7 @@ examples:
 ```json
 > ./deploy.sh -c config.json install
 ```
-> 注: 执行其他命令前，请先安装依赖包
+> 注: 执行其他命令前，请先安装
 
 **启动配置文件所有程序**
 
