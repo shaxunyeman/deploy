@@ -27,7 +27,7 @@ redis=`cat "${peersafe_push_service_config}" | jq -r .redis`
 log_level=`cat "${peersafe_push_service_config}" | jq -r .log_level`
 
 function has_service() {
-    local count=`ps -ef|grep "$1"|grep -v grep|grep -v sh|grep -v bash|grep -v make|wc -l`
+    local count=`ps -ef|grep "$1"|grep -v grep|grep -v sh|grep -v ssh|grep -v bash|grep -v make|wc -l`
     echo ${count}
 }
 
@@ -125,9 +125,9 @@ do
         error_log="${zebra_log_dir}/error_console.log"
         console_log="${zebra_log_dir}/console_log.log"
 
-        ${peersafe_push_service} -R ${redis} -N ${bootstrap} \
-            --log_no_console --log_folder ${zebra_log_dir} \
-            --log_* ${log_level} 2>${error_log} 1>${console_log} &
+        ${peersafe_push_service} -R ${redis} -N "${bootstrap}" \
+            --log_no_console --log_folder "${zebra_log_dir}" \
+            --log_* "${log_level}" 2>"${error_log}" 1>"${console_log}" &
     fi
 
     # check whether umbroatcat is running
@@ -141,7 +141,7 @@ do
 
 
         umbroadcast="${zebra_dir}/scripts/umbroadcast.py"
-        python ${umbroadcast} -R ${redis} 1>console_log 2>error_log &
+        python ${umbroadcast} -R ${redis} 1>"${console_log}" 2>"${error_log}" &
     fi
     sleep 60
 done

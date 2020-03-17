@@ -15,7 +15,7 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 zebra_dir=`pwd`
-DEFUALT_SERVICES=("peersafe_server" "peersafe_relay" "peersafe_box" "peersafe_push_service")
+DEFUALT_SERVICES=("peersafe_server" "peersafe_relay" "peersafe_box" "ShadowBox" "peersafe_push_service")
 
 function usage() {
     echo "usage: "
@@ -39,47 +39,139 @@ function usage() {
     echo
 }
 
-function has_service() {
-    local service_count=`ps -ef|grep $1|grep -v grep|grep -v bash|wc -l`
+function has_service_by_name() {
+    local service_count=`ps -ef|grep $1|grep -v grep|grep -v bash|grep -v ssh|wc -l`
     echo ${service_count}
 }
 
-function service_pid() {
-    local service=`ps -ef|grep $1|grep -v grep|grep -v bash| awk '{print $2}'`
+function service_pid_by_name() {
+    local service=`ps -ef|grep $1|grep -v grep|grep -v bash|grep -v ssh| awk '{print $2}'`
     echo ${service}
 }
 
-function kill_service() {
+function kill_service_by_name() {
     local service_name="$1"
 
     # kill parent process
-    local parent_service=`ps -ef|grep ${service_name}|grep -v grep|grep -v bash| awk '{print $3}'`
+    local parent_service=`ps -ef|grep ${service_name}|grep -v grep|grep -v bash|grep -v ssh| awk '{print $3}'`
     if [ ${parent_service} -gt 1 ]; then
         kill -9 ${parent_service}
     fi
 
     # then kill child process
-    local service=`ps -ef|grep ${service_name}|grep -v grep|grep -v bash| awk '{print $2}'`
+    local service=`ps -ef|grep ${service_name}|grep -v grep|grep -v bash|grep -v ssh| awk '{print $2}'`
     if [ ${service} -gt 0 ]; then
         kill -9 ${service}
     fi
 }
 
-function show_service() {
-    local has_service=$(has_service $1)
+function show_service_by_name() {
+    local has_service=$(has_service_by_name $1)
     if [ ${has_service} -eq 0 ]; then
         echo ""
     else
-        local service=$(service_pid $1)
+        local service=$(service_pid_by_name $1)
         local state=`netstat -nulp 2>/dev/null| grep ${service}`
         echo ${state}
     fi
 }
 
+function show_shadow_box() {
+    local has_service=$(has_service_by_name "ShadowBox")
+    if [ ${has_service} -eq 0 ]; then
+        echo ""
+    else
+        local service=$(service_pid_by_name "ShadowBox")
+        local state=`netstat -ntlp 2>/dev/null| grep ${service}`
+        echo ${state}
+    fi
+}
+
+# whether has service running by udp port
+function has_service_by_uport() {
+    local port="$1"
+    local count=`netstat -nulp 2>/dev/null | grep ${port}| wc -l`
+    echo ${count}
+}
+
+# whether has service running by tdp port
+function has_service_by_tport() {
+    local port="$1"
+    local count=`netstat -ntlp 2>/dev/null | grep ${port}| wc -l`
+    echo ${count}
+}
+
+# get serivce's pid by udp port
+function service_pid_by_uport() {
+    local port="$1"
+    local service=`netstat -nulp 2>/dev/null | grep ${port} | awk '{print $6}' | awk -F '/' '{print $1}'`
+    echo ${service}
+}
+
+# get serivce's pid by tdp port
+function service_pid_by_tport() {
+    local port="$1"
+    local service=`netstat -ntlp 2>/dev/null | grep ${port} | awk '{print $7}' | awk -F '/' '{print $1}'`
+    echo ${service}
+}
+
+# kill service by pid
+function kill_service_by_pid() {
+    local pid="$1"
+
+    # kill parent process
+    local parent_service=`ps -ef|grep ${pid}|grep -v grep|grep -v bash|grep -v ssh| awk '{print $3}'`
+    if [ ${parent_service} -gt 1 ]; then
+        kill -9 ${parent_service}
+    fi
+
+    # then kill child process
+    kill -9 ${pid}
+}
+
+# show service's status by upd port
+function show_service_by_uport() {
+    local has_service=$(has_service_by_uport $1)
+    if [ ${has_service} -eq 0 ]; then
+        echo ""
+    else
+        local service=$(service_pid_by_uport $1)
+        local state=`netstat -nulp 2>/dev/null| grep ${service}`
+        echo ${state}
+    fi
+}
+
+# show service's status by tcp port
+function show_service_by_tport() {
+    local has_service=$(has_service_by_tport $1)
+    if [ ${has_service} -eq 0 ]; then
+        echo ""
+    else
+        local service=$(service_pid_by_tport $1)
+        local state=`netstat -ntlp 2>/dev/null| grep ${service}`
+        echo ${state}
+    fi
+}
+
+# get port from config
+function serivce_port_from_config() {
+    local service_name="$1"
+    local service_config="${zebra_dir}/etc/${service_name}.json"
+    local port=`cat ${service_config} | jq -r .port`
+    echo ${port}
+}
+
+function shadowbox_listen_port_from_config() {
+    local service_config="${zebra_dir}/etc/peersafe_box.json"
+    local port=`cat ${service_config} | jq -r .rest_api_port`
+    echo ${port}
+}
+
 function start_peersafe_server() {
-    local has_service=$(has_service ${SERVICE})
+    local service_port=$(serivce_port_from_config ${SERVICE})
+    local has_service=$(has_service_by_uport ${service_port})
     if [ ${has_service} -gt 0 ]; then
-        printf "${RED}peersafe_server has already run.\n${NC}"
+        printf "${RED}peersafe_server binded on ${service_port} has already run.\n${NC}"
         exit 1
     fi
 
@@ -91,11 +183,11 @@ function start_peersafe_server() {
     wait_seconds=0
     while true
     do
-        status=$(show_service ${SERVICE})
+        status=$(show_service_by_uport ${service_port})
         if [ "${status}" != "" ]; then
             pid=`echo ${status} | awk '{print $6}'| awk -F '/' '{print $1}'`
             if [ "${pid}" != "" ]; then
-                printf "${GREEN}${SERVICE} has startup successfully${NC}\n"
+                printf "${GREEN}${SERVICE} binded on ${service_port} has startup successfully${NC}\n"
                 break
             fi
         fi
@@ -109,9 +201,10 @@ function start_peersafe_server() {
 }
 
 function start_peersafe_box() {
-    local has_service=$(has_service ${SERVICE})
+    local service_port=$(serivce_port_from_config ${SERVICE})
+    local has_service=$(has_service_by_uport ${service_port})
     if [ ${has_service} -gt 0 ]; then
-        printf "${RED}${SERVICE} has already run.\n${NC}"
+        printf "${RED}${SERVICE} binded on ${service_port} has already run.\n${NC}"
         exit 1
     fi
 
@@ -123,11 +216,11 @@ function start_peersafe_box() {
     wait_seconds=0
     while true
     do
-        status=$(show_service ${SERVICE})
+        status=$(show_service_by_uport ${service_port})
         if [ "${status}" != "" ]; then
             pid=`echo ${status} | awk '{print $6}'| awk -F '/' '{print $1}'`
             if [ "${pid}" != "" ]; then
-                printf "${GREEN}${SERVICE} has startup successfully${NC}\n"
+                printf "${GREEN}${SERVICE} binded on ${service_port} has startup successfully${NC}\n"
                 break
             fi
         fi
@@ -141,9 +234,10 @@ function start_peersafe_box() {
 }
 
 function start_peersafe_relay() {
-    has_peersafe_relay=$(has_service ${SERVICE})
+    local service_port=$(serivce_port_from_config ${SERVICE})
+    local has_peersafe_relay=$(has_service_by_uport ${service_port})
     if [ ${has_peersafe_relay} -gt 0 ]; then
-        printf "${RED}${SERVICE} has already setup${NC}\n"
+        printf "${RED}${SERVICE} binded on ${service_port} has already setup${NC}\n"
         exit 1
     fi
 
@@ -155,11 +249,11 @@ function start_peersafe_relay() {
     wait_seconds=0
     while true
     do
-        status=$(show_service ${SERVICE})
+        status=$(show_service_by_uport ${service_port})
         if [ "${status}" != "" ]; then
             pid=`echo ${status} | awk '{print $6}'| awk -F '/' '{print $1}'`
             if [ "${pid}" != "" ]; then
-                printf "${GREEN}${SERVICE} has startup successfully${NC}\n"
+                printf "${GREEN}${SERVICE} binded on ${service_port} has startup successfully${NC}\n"
                 break
             fi
         fi
@@ -173,7 +267,7 @@ function start_peersafe_relay() {
 }
 
 function start_peersafe_push_service() {
-    local has_service=$(has_service ${SERVICE})
+    local has_service=$(has_service_by_name ${SERVICE})
     if [ ${has_service} -gt 0 ]; then
         printf "${RED}peersafe_push_service has already run.\n${NC}"
         exit 1
@@ -187,7 +281,7 @@ function start_peersafe_push_service() {
     wait_seconds=0
     while true
     do
-        status=$(show_service ${SERVICE})
+        status=$(show_service_by_name ${SERVICE})
         if [ "${status}" != "" ]; then
             pid=`echo ${status} | awk '{print $6}'| awk -F '/' '{print $1}'`
             if [ "${pid}" != "" ]; then
@@ -253,6 +347,14 @@ case $key in
     SERVICE="peersafe_box"
     shift # past argument
     ;;
+    ShadowBox)
+    if [ ! -z ${SERVICE} ]; then
+        usage
+        exit 0
+    fi
+    SERVICE="ShadowBox"
+    shift # past argument
+    ;;
     peersafe_relay)
     if [ ! -z ${SERVICE} ]; then
         usage
@@ -306,27 +408,55 @@ if [ "${COMMAND}" = "start" ]; then
         start_peersafe_push_service
     fi
 elif [ "${COMMAND}" = "stop" ]; then
-    has_peersafe_server=$(has_service ${SERVICE})
-    if [ ${has_peersafe_server} -gt 0 ]; then
-        kill_service ${SERVICE}
-
-        if [ "${SERVICE}" = "umbroatcast" ]; then
-            has_umbroatcast=$(has_service "umbroatcast")
+    if [ "${SERVICE}" == "peersafe_push_service" ]; then
+        has_peersafe_server=$(has_service_by_name ${SERVICE})
+        if [ ${has_peersafe_server} -gt 0 ]; then
+            kill_service_by_name ${SERVICE}
+            has_umbroatcast=$(has_service_by_name "umbroatcast")
             if [ ${has_umbroatcast} -gt 0 ]; then
-                kill_service "umbroatcast" 
+                kill_service_by_name "umbroatcast" 
+            fi
+            has_peersafe_server=$(has_service_by_name ${SERVICE})
+            if [ ${has_peersafe_server} -eq 0 ]; then
+                printf "${GREEN}${SERVICE} has stop successfully\n${NC}"
+                exit 1
             fi
         fi
+    else
+        service_port=$(serivce_port_from_config ${SERVICE})
+        has_peersafe_server=$(has_service_by_uport ${service_port})
+        if [ ${has_peersafe_server} -gt 0 ]; then
+            pid=$(service_pid_by_uport ${service_port})
+            kill_service_by_pid ${pid}
 
-        #printf "${CYAN}peersafe_server has stopped${NC}\n"
-        has_peersafe_server=$(has_service ${SERVICE})
+            has_peersafe_server=$(has_service_by_uport ${service_port})
 
-        if [ ${has_peersafe_server} -eq 0 ]; then
-            printf "${GREEN}${SERVICE} has stop successfully\n${NC}"
-            exit 1
+            if [ "${SERVICE}" = "peersafe_box" ]; then
+                # kill shadowBox API service
+                shadowbox_api_port=$(shadowbox_listen_port_from_config) 
+                shadowbox_api_pid=$(service_pid_by_tport ${shadowbox_api_port})
+                kill_service_by_pid ${shadowbox_api_pid}
+            fi
+
+            if [ ${has_peersafe_server} -eq 0 ]; then
+                printf "${GREEN}${SERVICE} binded on ${service_port} has stop successfully\n${NC}"
+                exit 1
+            fi
         fi
     fi
+
 elif [ "${COMMAND}" = "show" ]; then
-    status=$(show_service ${SERVICE})
+    if [ "${SERVICE}" == "peersafe_push_service" ]; then
+        status=$(show_service_by_name ${SERVICE})
+    elif [ "${SERVICE}" == "ShadowBox" ]; then
+        service_port=$(shadowbox_listen_port_from_config) 
+        status=$(show_service_by_tport ${service_port})
+        #status=$(show_shadow_box)
+    else
+        service_port=$(serivce_port_from_config ${SERVICE})
+        status=$(show_service_by_uport ${service_port})
+    fi
+
     if [ "${status}" == "" ]; then
         printf '%-15s %-10s %-6s %-17s\n' \
         "${SERVICE}" "-" "-" "-"
@@ -334,8 +464,14 @@ elif [ "${COMMAND}" = "show" ]; then
     fi
     protocol=`echo ${status} | awk '{print $1}'`
     bind=`echo ${status} | awk '{print $4}'`
-    pid=`echo ${status} | awk '{print $6}'| awk -F '/' '{print $1}'`
-    name=`echo ${status} | awk '{print $6}'| awk -F '/' '{print $2}'`
+
+    if [ "${SERVICE}" == "ShadowBox" ]; then
+        pid=`echo ${status} | awk '{print $7}'| awk -F '/' '{print $1}'`
+        name=`echo ${status} | awk '{print $7}'| awk -F '/' '{print $2}'`
+    else
+        pid=`echo ${status} | awk '{print $6}'| awk -F '/' '{print $1}'`
+        name=`echo ${status} | awk '{print $6}'| awk -F '/' '{print $2}'`
+    fi
 
     printf '%-15s %-10s %-6s %-17s\n' \
     "${name}" "${pid}" "${protocol}" "${bind}"

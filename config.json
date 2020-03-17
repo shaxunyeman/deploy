@@ -1,49 +1,73 @@
 {
-    "work_path":"/home/ubuntu/zebra",
+    "work_path":"~/zebra",
     "peersafe_server": {
         "hosts":[
-            {"user":"ubuntu","ip":"139.199.164.113", "port":22,"key":"~/.ssh/id_rsa"}
+            {"user":"dev","ip":"127.0.0.1", "port":22,"key":"~/.ssh/id_rsa"}
         ],
+        "disable_zero":0,
         "port":37053,
         "ip_family":4,
         "log_level":"Info",
         "bootstraps":[
-            "139.199.164.113:37053"
+            "127.0.0.1:37053"
         ]
     },
     "peersafe_box": {
         "hosts":[
-            {"user":"ubuntu","ip":"139.199.164.113", "port":22,"key":"~/.ssh/id_rsa"}
+            {"user":"dev","ip":"127.0.0.1", "port":22,"key":"~/.ssh/id_rsa"}
         ],
         "port":47054,
-        "ip_family":4,
+        "ip_family":6,
         "log_level":"Info",
-        "rest_api_port":8080,
+        "rest_api_ip":"127.0.0.1",
+        "rest_api_port":5555,
         "rest_api_protocol":"http",
         "bootstraps":[
-            "139.199.164.113:37053"
+            "127.0.0.1:37053"
         ],
         "peersafe_relays":[
-            "peersafe:peersafe@192.168.29.:34780"
+	    "peersafe:peersafe@::FFFF:127.0.0.1:34780"
         ]
     },
     "peersafe_relay": {
         "hosts":[
-            {"user":"ubuntu","ip":"139.199.164.113", "port":22,"key":"~/.ssh/id_rsa"}
+            {"user":"dev","ip":"127.0.0.1", "port":22,"key":"~/.ssh/id_rsa"}
         ],
         "port":34780,
-        "ip_family":4,
+        "ip_family":6,
         "user":"peersafe",
         "passwd":"peersafe"
     },
     "peersafe_push_service":{
         "hosts":[
-            {"user":"ubuntu","ip":"139.199.164.113", "port":22,"key":"~/.ssh/id_rsa"}
+            {"user":"dev","ip":"127.0.0.1", "port":22,"key":"~/.ssh/id_rsa"}
         ],
         "redis":"127.0.0.1:6379",
         "log_level":"Info",
         "bootstraps":[
             "127.0.0.1:37053"
         ]
+    },
+    "announce":{
+        "bootstraps": [
+            "127.0.0.1:37053"
+        ],
+        "add":[
+            {
+                "user": "user",
+                "pwd": "pwd",
+                "ip": "127.0.0.1",
+                "port": 34780
+            }
+        ],
+        "remove": [
+             {
+                "ip": "127.0.0.1",
+                "port": 34780
+            }           
+        ],
+        "fetch": 1
     }
+
+    
 }

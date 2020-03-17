@@ -16,15 +16,24 @@ NC='\033[0m' # No Color
 
 zebra_dir=`pwd`
 peersafe_relay_config="${zebra_dir}/etc/peersafe_relay.json"
-peersafe_relay="${zebra_dir}/bin/peersafe_relay"
 
-zero=`cat "${peersafe_relay_config}" | jq -r .zero`
 listen_port=`cat "${peersafe_relay_config}" | jq -r .port`
 user=`cat "${peersafe_relay_config}" | jq -r .user`
 passwd=`cat "${peersafe_relay_config}" | jq -r .passwd`
+ip_family=`cat "${peersafe_relay_config}" | jq -r .ip_family`
+
+peersafe_relay="${zebra_dir}/bin/peersafe_relay"
+rm -f "${peersafe_relay}" 2>/dev/null
+if [ ${ip_family} -eq 4 ]; then
+    ln -s "${zebra_dir}/bin/peersafe_relay_v4" "${peersafe_relay}"
+elif [ ${ip_family} -eq 6 ]; then
+    ln -s "${zebra_dir}/bin/peersafe_relay_v6" "${peersafe_relay}"
+else
+    ln -s "${zebra_dir}/bin/peersafe_relay_v6" "${peersafe_relay}"
+fi
 
 function has_peersafe_relay() {
-    local count=`ps -ef|grep peersafe_relay|grep -v grep|grep -v sh|grep -v bash|grep -v make|wc -l`
+    local count=`ps -ef|grep peersafe_relay|grep -v grep|grep -v sh|grep -v ssh|grep -v bash|grep -v make|wc -l`
     echo ${count}
 }
 
